@@ -24,17 +24,25 @@ class ElementTriP1B(ElementH1):
         if i == 0:
             phi = 1. - x - y
             dphi = np.array([-1. + 0. * x, -1. + 0. * x])
+            H    = np.array([[0., 0.],
+                             [0., 0.]])
         elif i == 1:
             phi = x
             dphi = np.array([1. + 0. * x, 0. * x])
+            H    = np.array([[0., 0.],
+                             [0., 0.]])
         elif i == 2:
             phi = y
             dphi = np.array([0. * x, 1. + 0. * x])
+            H    = np.array([[0., 0.],
+                             [0., 0.]])
         elif i == 3:
-            phi = 27. * x * y * (1. - x - y)
+            phi  = 27. * x * y * (1. - x - y)
             dphi = 27. * np.array([y * (1. - x - y) - x * y,
                                    x * (1. - x - y) - x * y])
+            H    = 27. * np.array([[-2. * y, 1. - 2. * x - 2. * y],
+                                   [1. - 2. * x - 2. * y, -2. * x]])
         else:
             self._index_error()
 
-        return phi, dphi
+        return phi, dphi, H

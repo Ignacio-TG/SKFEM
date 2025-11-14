@@ -24,22 +24,26 @@ class ElementTetP1(ElementH1):
             dphi = np.array([-1 + 0*x,
                              -1 + 0*x,
                              -1 + 0*x])
+            H    = np.zeros((3, 3))
         elif i == 1:
             phi = x
             dphi = np.array([1 + 0*x,
                              0*x,
                              0*x])
+            H    = np.zeros((3, 3))
         elif i == 2:
             phi = y
             dphi = np.array([0*x,
                              1 + 0*x,
                              0*x])
+            H    = np.zeros((3, 3))
         elif i == 3:
             phi = z
             dphi = np.array([0*x,
                              0*x,
                              1 + 0*x])
+            H    = np.zeros((3, 3))
         else:
             self._index_error()
 
-        return phi, dphi
+        return phi, dphi, H

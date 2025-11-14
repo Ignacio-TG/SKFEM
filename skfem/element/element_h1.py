@@ -9,7 +9,7 @@ class ElementH1(Element):
 
     def gbasis(self, mapping, X, i, tind=None):
         """Identity transformation."""
-        phi, dphi = self.lbasis(X, i)
+        phi, dphi, H = self.lbasis(X, i)
         invDF = mapping.invDF(X, tind)
         if len(X.shape) == 2:
             return (DiscreteField(

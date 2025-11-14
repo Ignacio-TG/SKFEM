@@ -24,49 +24,73 @@ class ElementHex1(ElementH1):
         x, y, z = X
 
         if i == 0:
-            phi = x * y * z
+            phi  = x * y * z
             dphi = np.array([y * z,
                              x * z,
                              x * y])
+            H    = np.array([[0, z, y],
+                             [z, 0, x],
+                             [y, x, 0]])
         elif i == 1:
-            phi = x * y * (1 - z)
+            phi  = x * y * (1 - z)
             dphi = np.array([y * (1 - z),
                              x * (1 - z),
-                             -x * y])
+                            -x * y])
+            H    = np.array([[0    ,  1 - z, -y],
+                             [1 - z,  0    , -x],
+                             [-y   , -x    ,  0]])
         elif i == 2:
-            phi = x * (1 - y) * z
+            phi  = x * (1 - y) * z
             dphi = np.array([(1 - y) * z,
                              -x * z,
                              x * (1 - y)])
+            H    = np.array([[ 0    , -z    , 1 - y],
+                             [-z    ,  0    , -x   ],
+                             [ 1 - y, -x    , 0    ]])
         elif i == 3:
-            phi = (1 - x) * y * z
+            phi  = (1 - x) * y * z
             dphi = np.array([-y * z,
                              (1 - x) * z,
                              (1 - x) * y])
+            H    = np.array([[ 0    , -z    , -y   ],
+                             [ -z   ,  0    , 1 - x],
+                             [ -y   , 1 - x , 0    ]])
         elif i == 4:
-            phi = x * (1 - y) * (1 - z)
+            phi  = x * (1 - y) * (1 - z)
             dphi = np.array([(1 - y) * (1 - z),
                              -x * (1 - z),
                              -x * (1 - y)])
+            H    = np.array([[ 0      , -(1 - z), -(1 - y)],
+                             [-(1 - z), 0       ,  x      ],
+                             [-(1 - y), x       ,  0       ]])
         elif i == 5:
-            phi = (1 - x) * y * (1 - z)
+            phi  = (1 - x) * y * (1 - z)
             dphi = np.array([-y * (1 - z),
                              (1 - x) * (1 - z),
                              -(1 - x) * y])
+            H    = np.array([[ 0      , -(1 - z),  y      ],
+                             [-(1 - z), 0       , -(1 - x)],
+                             [ y     , -(1 - x), 0       ]])
         elif i == 6:
-            phi = (1 - x) * (1 - y) * z
+            phi  = (1 - x) * (1 - y) * z
             dphi = np.array([-(1 - y) * z,
                              -(1 - x) * z,
                              (1 - x) * (1 - y)])
+            H    = np.array([[ 0      ,  z      , -(1 - y)],
+                             [ z      , 0       , -(1 - x)],
+                             [-(1 - y), -(1 - x), 0       ]])
         elif i == 7:
-            phi = (1 - x) * (1 - y) * (1 - z)
+            phi  = (1 - x) * (1 - y) * (1 - z)
             dphi = np.array([-(1 - y) * (1 - z),
                              -(1 - x) * (1 - z),
                              -(1 - x) * (1 - y)])
+            H    = np.array([[ 0        , 1 - z   , 1 - y  ],
+                             [ 1 - z   , 0        , 1 - x  ],   
+                             [ 1 - y   , 1 - x    , 0      ]])
         else:
             self._index_error()
 
-        return phi, dphi
+        return phi, dphi, H
 
 
 class ElementHex1DG(ElementHex1):

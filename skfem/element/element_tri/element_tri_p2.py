@@ -27,22 +27,34 @@ class ElementTriP2(ElementH1):
                    + 4. * x * y + 2. * y ** 2)
             dphi = np.array([-3 + 4. * x + 4. * y,
                              -3 + 4. * x + 4. * y])
+            H    = np.array([[4., 4.],
+                             [4., 4.]])  # [[xx, xy],[xy, yy]]
         elif i == 1:
             phi = 2. * x ** 2 - x
-            dphi = np.array([4. * x - 1, 0. * x])
+            dphi  = np.array([4. * x - 1, 0. * x])
+            H     = np.array([[4., 0.],
+                              [0., 0.]])
         elif i == 2:
             phi = 2. * y ** 2 - y
-            dphi = np.array([0. * x, 4. * y - 1])
+            dphi  = np.array([0. * x, 4. * y - 1])
+            H     = np.array([[0., 0.],
+                              [0., 4.]])
         elif i == 3:  # 0->1
-            phi = 4. * x - 4. * x ** 2 - 4. * x * y
+            phi  = 4. * x - 4. * x ** 2 - 4. * x * y
             dphi = np.array([4 - 8. * x - 4. * y, -4. * x])
+            H    = np.array([[-8., -4.],
+                             [-4.,  0.]])
         elif i == 4:  # 1->2
             phi = 4. * x * y
             dphi = np.array([4. * y, 4. * x])
+            H    = np.array([[0., 4.],
+                             [4., 0.]])
         elif i == 5:  # 0->2
             phi = 4. * y - 4. * x * y - 4. * y ** 2
             dphi = np.array([-4. * y, 4 - 4. * x - 8. * y])
+            H    = np.array([[ 0., -4.],
+                             [-4., -8.]])
         else:
             self._index_error()
 
-        return phi, dphi
+        return phi, dphi, H

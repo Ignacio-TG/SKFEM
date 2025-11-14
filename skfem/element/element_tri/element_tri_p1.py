@@ -19,18 +19,25 @@ class ElementTriP1(ElementH1):
         x, y = X
 
         if i == 0:
-            phi = 1. - x - y
-            dphi = np.array([-1. + 0. * x, -1. + 0. * x])
+            phi   = 1. - x - y
+            dphi  = np.array([-1. + 0. * x, -1. + 0. * x])
+            ddphi = np.array([0.0 , 0.0])
+            H     = np.array([[0., 0.,],
+                              [0., 0.]])
         elif i == 1:
-            phi = x
-            dphi = np.array([1. + 0. * x, 0. * x])
+            phi   = x
+            dphi  = np.array([1. + 0. * x, 0. * x])
+            H     = np.array([[0., 0.,],
+                              [0., 0.]])
         elif i == 2:
-            phi = y
-            dphi = np.array([0. * x, 1. + 0. * x])
+            phi   = y
+            dphi  = np.array([0. * x, 1. + 0. * x])
+            H     = np.array([[0., 0.,],
+                              [0., 0.]])
         else:
             self._index_error()
 
-        return phi, dphi
+        return phi, dphi, H
 
 
 class ElementTriP1DG(ElementTriP1):

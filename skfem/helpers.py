@@ -216,3 +216,57 @@ def cross(A, B):
             A[2] * B[0] - A[0] * B[2],
             A[0] * B[1] - A[1] * B[0]
         ])
+
+def laplacian(u: np.ndarray, basis):
+    """
+    Compute the element-wise constant Laplacian of a P2 finite element solution with an affine mapping.
+
+    ## Inputs
+    - u : numpy.ndarray
+        Vector of nodal coefficients (finite element solution), shape (n_dofs,).
+    - basis : skfem.Basis
+        Basis associated to Tri P2 elements (or, more generally, affine P2 elements).
+        The basis is expected to provide mapping().invA of shape (dim, dim, nt) and
+        element local basis routines compatible with P2.
+    
+    ## Output
+    - lap_uh : numpy.ndarray
+        Array of element-wise constant values of Δu_h, shape (nt,), where nt is the
+        number of elements.
+    
+    Notes
+    -----
+    - The implementation assumes an affine mapping per element so that the Hessian of
+      reference basis functions is constant on each physical element.
+
+    """
+
+    # Extract affine mapping inverse Jacobians
+    invA = basis.mesh.mapping().invA                 # (dim, dim, nt)
+    G    = np.einsum('aik,bik->abk', invA, invA)     # (dim, dim, nt)
+    dim  = invA.shape[0]                             # 2 for 2D, 3 for 3D
+
+    # Set reference point based on dimension
+    if dim == 2:
+        Xref = (1/3, 1/3)  # Triangle center
+    elif dim == 3:
+        Xref = (1/4, 1/4, 1/4)  # Tetrahedron center
+
+    
+    # Reference Hessians of local basis functions
+    nlb  = basis.elem.doflocs.shape[0]     # N° local basis (P2 -> 6)
+    Hhat = np.zeros((dim, dim, nlb))
+    
+    for i in range(nlb):
+        _, _, H = basis.elem.lbasis(Xref, i)    
+        Hhat[:, :, i] = H
+
+    # Calculate laplacian of reference bases mapped to physical element
+    laps = np.einsum('abk,abm->mk', G, Hhat)      # (nlb, nt)
+
+    # Calculate laplacian per element
+    edofs = basis.dofs.element_dofs               # (nlb, nt)
+    u_loc = u[edofs]                              # (nlb, nt)
+    lap_uh = np.sum(u_loc * laps, axis=0)         # (nt,)
+
+    return lap_uh

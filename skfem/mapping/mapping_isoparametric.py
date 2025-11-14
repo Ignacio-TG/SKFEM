@@ -53,13 +53,13 @@ class MappingIsoparametric(Mapping):
         if tind is None:
             out = np.zeros((t.shape[1], X.shape[1]))
             for itr in range(t.shape[0]):
-                phi, _ = self.elem.lbasis(X, itr)
+                phi, _, _ = self.elem.lbasis(X, itr)
                 out += p[i, t[itr, :]][:, None] * phi
             return out
         else:
             out = np.zeros((len(tind), X.shape[-1]))
             for itr in range(t.shape[0]):
-                phi, _ = self.elem.lbasis(X, itr)
+                phi, _, _= self.elem.lbasis(X, itr)
                 out += p[i, t[itr, tind]][:, None] * phi
             return out
 
@@ -76,13 +76,13 @@ class MappingIsoparametric(Mapping):
         if find is None:
             out = np.zeros((facets.shape[1], X.shape[1]))
             for itr in range(facets.shape[0]):
-                phi, _ = self.bndelem.lbasis(X, itr)
+                phi, _, _= self.bndelem.lbasis(X, itr)
                 out += p[i, facets[itr, :]][:, None] * phi
             return out
         else:
             out = np.zeros((len(find), X.shape[-1]))
             for itr in range(facets.shape[0]):
-                phi, _ = self.bndelem.lbasis(X, itr)
+                phi, _, _ = self.bndelem.lbasis(X, itr)
                 out += p[i, facets[itr, find]][:, None] * phi
             return out
 
@@ -99,13 +99,13 @@ class MappingIsoparametric(Mapping):
         if find is None:
             out = np.zeros((facets.shape[1], X.shape[1]))
             for itr in range(facets.shape[0]):
-                _, dphi = self.bndelem.lbasis(X, itr)
+                _, dphi, _ = self.bndelem.lbasis(X, itr)
                 out += p[i, facets[itr, :]][:, None] * dphi[j]
             return out
         else:
             out = np.zeros((len(find), X.shape[-1]))
             for itr in range(facets.shape[0]):
-                _, dphi = self.bndelem.lbasis(X, itr)
+                _, dphi, _ = self.bndelem.lbasis(X, itr)
                 out += p[i, facets[itr, find]][:, None] * dphi[j]
             return out
 
@@ -115,13 +115,13 @@ class MappingIsoparametric(Mapping):
         if tind is None:
             out = np.zeros((t.shape[1], X.shape[1]))
             for itr in range(t.shape[0]):
-                _, dphi = self.elem.lbasis(X, itr)
+                _, dphi, _ = self.elem.lbasis(X, itr)
                 out += p[i, t[itr, :]][:, None] * dphi[j]
             return out
         else:
             out = np.zeros((len(tind), X.shape[-1]))
             for itr in range(t.shape[0]):
-                _, dphi = self.elem.lbasis(X, itr)
+                _, dphi, _ = self.elem.lbasis(X, itr)
                 out += p[i, t[itr, tind]][:, None] * dphi[j]
             return out
 

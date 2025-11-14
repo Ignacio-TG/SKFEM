@@ -34,6 +34,9 @@ class ElementTetP2(ElementH1):
                 -3. + 4.*x + 4.*y + 4.*z,
                 -3. + 4.*x + 4.*y + 4.*z,
             ])
+            H    = np.array([[4., 0., 0.],
+                             [0., 4., 0.],
+                             [0., 0., 4.]])
         elif i == 1:  # at (1,0,0)
             phi = - 1.*x + 2.*x**2
             dphi = np.array([
@@ -41,6 +44,9 @@ class ElementTetP2(ElementH1):
                 0*x,
                 0*x,
             ])
+            H    = np.array([[4., 0., 0.],
+                             [0., 0., 0.],
+                             [0., 0., 0.]])
         elif i == 2:  # at (0,1,0)
             phi = - 1.*y + 2.*y**2
             dphi = np.array([
@@ -48,6 +54,9 @@ class ElementTetP2(ElementH1):
                 -1. + 4.*y,
                 0*x,
             ])
+            H    = np.array([[0., 0., 0.],
+                             [0., 4., 0.],
+                             [0., 0., 0.]])
         elif i == 3:  # at (0,0,1)
             phi = - 1.*z + 2.*z**2
             dphi = np.array([
@@ -55,6 +64,9 @@ class ElementTetP2(ElementH1):
                 0*x,
                 -1. + 4.*z,
             ])
+            H    = np.array([[0., 0., 0.],
+                             [0., 0., 0.],
+                             [0., 0., 4.]])
         elif i == 4:  # between (0,1)
             phi = 4.*x - 4.*x**2 - 4.*x*y - 4*x*z
             dphi = np.array([
@@ -62,6 +74,9 @@ class ElementTetP2(ElementH1):
                 -4.*x,
                 -4.*x,
             ])
+            H   = np.array([[-8., -4., -4.],
+                            [-4.,  0.,  0.],
+                            [-4.,  0.,  0.]])
         elif i == 5:  # between (1,2)
             phi = 4.*x*y
             dphi = np.array([
@@ -69,6 +84,9 @@ class ElementTetP2(ElementH1):
                 4.*x,
                 0*x,
             ])
+            H   = np.array([[0., 4., 0.],
+                            [4., 0., 0.],
+                            [0., 0., 0.]])
         elif i == 6:  # between (0,2)
             phi = 0. + 4.*y - 4.*x*y - 4.*y**2 - 4.*y*z
             dphi = np.array([
@@ -76,6 +94,10 @@ class ElementTetP2(ElementH1):
                 4. - 4.*x - 8.*y - 4.*z,
                 -4.*y,
             ])
+            H   = np.array([[0.,  -4.,  0.],
+                            [-4., -8., -4.],
+                            [0.,  -4.,  0.]])
+            
         elif i == 7:  # between (0,3)
             phi = 0. + 4.*z - 4.*x*z - 4.*y*z - 4.*z**2
             dphi = np.array([
@@ -83,6 +105,10 @@ class ElementTetP2(ElementH1):
                 -4.*z,
                 4. - 4.*x - 4.*y - 8.*z,
             ])
+            H    = np.array([[0.,  0.,  -4.],
+                             [0.,  0.,  -4.],
+                             [-4., -4., -8.]])
+            
         elif i == 8:
             phi = 0. + 4.*x*z
             dphi = np.array([
@@ -90,6 +116,10 @@ class ElementTetP2(ElementH1):
                 0*x,
                 4*x,
             ])
+            H   = np.array([[0., 0., 4.],
+                            [0., 0., 0.],
+                            [4., 0., 0.]])
+            
         elif i == 9:
             phi = 0. + 4.*y*z
             dphi = np.array([
@@ -97,7 +127,10 @@ class ElementTetP2(ElementH1):
                 4*z,
                 4*y,
             ])
+            H    = np.array([[0., 0., 0.],
+                             [0., 0., 4.],
+                             [0., 4., 0.]])
         else:
             self._index_error()
 
-        return phi, dphi
+        return phi, dphi, H

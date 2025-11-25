@@ -3,6 +3,7 @@
 from typing import Union, Optional
 import numpy as np
 from numpy import ndarray, zeros_like
+from skfem import Basis
 from skfem.element import DiscreteField
 from skfem.assembly.form.form import FormExtraParams
 
@@ -270,3 +271,27 @@ def laplacian(u: np.ndarray, basis):
     lap_uh = np.sum(u_loc * laps, axis=0)         # (nt,)
 
     return lap_uh
+
+def precompute_operators(basis: Basis):
+    ref_coords   = basis.quadrature[0] 
+    n_dofs_local = basis.elem.doflocs.shape[0]
+    edofs        = basis.dofs.element_dofs
+    list_phi      = []
+    list_dphi     = []
+    list_hessian  = []
+
+    for i in range(n_dofs_local):
+        out = basis.elem.lbasis(ref_coords, i)
+        list_phi.append(out[0])
+        list_dphi.append(out[1])
+        list_hessian.append(out[2])
+
+    phi     = np.array(list_phi)     # (n_dofs, n_quad)
+    dphi    = np.array(list_dphi)    # (n_dofs, ref_dim, n_quad)
+    hessian = np.array(list_hessian) # (n_dofs, ref_dim, ref_dim)
+    invA    = basis.mesh.mapping().invA
+
+    grad_phi  = np.einsum('kie, dkq -> diqe', invA, dphi) # (n_dofs, phys_dim, n_quad, n_elems)
+    laplacian_phi = np.einsum('kie, lie, dkl -> de', invA, invA, hessian) # (n_dofs, n_elems)
+
+    return edofs, phi, grad_phi, laplacian_phi

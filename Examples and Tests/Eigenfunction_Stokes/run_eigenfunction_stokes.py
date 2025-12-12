@@ -1,145 +1,155 @@
+import sys
 import numpy as np
-import pandas as pd
-import matplotlib.pyplot as plt
 from skfem import (
-    MeshTri, Basis, FacetBasis, ElementTriP2, ElementTriP1, ElementVector,
-    asm, bmat, condense, solve, BilinearForm, LinearForm
+    Basis, ElementTriP2, ElementTriP1, ElementVector,
+    asm, bmat, condense, BilinearForm, LinearForm, Mesh
 )
 from skfem.models.general import divergence
-from skfem.models.poisson import vector_laplace, mass
-from skfem.helpers import grad, dot, laplacian
-
+from skfem.models.poisson import vector_laplace
+from skfem.helpers import dot
+import pandas as pd
 import scipy.sparse as sp
-from scipy.sparse.linalg import eigsh, eigs, splu, LinearOperator
+from scipy.sparse.linalg import eigs
 
-import scipy.linalg
+# Setear condición para la presión
+def get_p_boundary_option():
+    for arg in sys.argv[1:]:
+        if arg.startswith("P_option="):
+            try:
+                return int(arg.split("=")[1])
+            except ValueError:
+                pass
+    return 1 
+
+P_boundary_option = get_p_boundary_option() # 1: presión media cero, 2: presión en un punto
+
+# Importar malla
+malla  = Mesh.load("data/Ugeom.obj", force_meshio_type='triangle')
+nodes  = malla.p
+facets = malla.facets
+boundary_facets = malla.boundary_facets()
+boundary_nodes  = malla.boundary_nodes()
+
+pared   = []
+salida  = []
+entrada = []
+for i,e in enumerate(boundary_facets):
+    facets_e = facets[:, e]
+    nodox = nodes[0, facets_e]
+    nodoy = nodes[1, facets_e]
+    m = np.array([np.mean(nodox), np.mean(nodoy)])
+
+    if m[1] > -2.0:
+        pared.append(e)
+    if m[1] <= -2.0 and m[0] > 0.0:
+        salida.append(e)
+    if m[1] <= -2.0 and m[0] < 0.0:
+        entrada.append(e)
+
+pared = np.array(pared)
+salida = np.array(salida)
+entrada = np.array(entrada)
+coordenadas = nodes[:, boundary_nodes]
+
+# Definir elementos y bases (P2 para velocidad, P1 para presión)
+element = {
+    'u': ElementVector(ElementTriP2()),
+    'p': ElementTriP1(),
+}
+basis = {
+    'u': Basis(malla, element['u'], intorder=4),
+    'p': Basis(malla, element['p'], intorder=4),
+}
+basis_u, basis_p = basis['u'], basis['p']
+Nu, Np = basis_u.N, basis_p.N
+N      = Nu + Np
+
+# Ensamblaje de matrices
+@BilinearForm
+def mass_matrix(u, v, w):
+    return dot(u, v)
+
+nu = 0.035
+
+A =  asm(vector_laplace, basis_u)               
+B = -asm(divergence, basis_u, basis_p)   
+M =  asm(mass_matrix, basis_u)  
 
 
-def build_problem_stokes(problem, N):
+if P_boundary_option == 1:
+    print('Condición: presión media cero')
+    @LinearForm
+    def mean_vec(q, w):
+        return q
 
-    if problem == 1:
-        # Definir dominio y mallado
-        mesh = MeshTri.init_tensor(
-            np.linspace(-1.0, 1.0, N + 1), 
-            np.linspace(-1.0, 1.0, N + 1)
-        )
+    m    = asm(mean_vec, basis_p)    # shape: (Np,)
+    Mcol = m.reshape((-1, 1))     # (Np,1)
+    Mrow = m.reshape((1,  -1))    # (1,Np)
 
-        mesh = mesh.with_boundaries({
-            'left':   lambda x: x[0] == -1.0,
-            'right':  lambda x: x[0] == 1.0,
-            'bottom': lambda x: x[1] == -1.0,
-            'top':    lambda x: x[1] == 1.0,
-        })
-    else:
-        # Definir dominio y mallado
-        mesh = MeshTri.init_tensor(
-            np.linspace(0.0, 1.0, N + 1), 
-            np.linspace(0.0, 1.0, N + 1)
-        )
-
-        mesh = mesh.with_boundaries({
-            'left':   lambda x: x[0] == 0.0,
-            'right':  lambda x: x[0] == 1.0,
-            'bottom': lambda x: x[1] == 0.0,
-            'top':    lambda x: x[1] == 1.0,
-        })
-
-    # Definir elementos y bases (P2 para velocidad, P1 para presión)
-    element = {
-        'u': ElementVector(ElementTriP2()),
-        'p': ElementTriP1(),
-    }
-    basis = {
-        'u': Basis(mesh, element['u'], intorder=4),
-        'p': Basis(mesh, element['p'], intorder=4),
-    }
-    basis_u, basis_p = basis['u'], basis['p']
-    Nu, Np = basis_u.N, basis_p.N
-    N = Nu + Np
-
-    @BilinearForm
-    def mass_matrix(u, v, w):
-        return dot(u, v)
-
-    # Ensamblaje de matrices
-    A =  asm(vector_laplace, basis_u)               
-    B = -asm(divergence, basis_u, basis_p)   
-    M =  asm(mass_matrix, basis_u)    
-
+ 
     # Construcción del ssitema
-    K = bmat([[A,    B.T],
-            [B,    None]], format='csr') 
+    K = bmat([[nu*A,    B.T, None],
+            [B,    None, Mcol],
+            [None, Mrow, np.array([1])]], format='csr') 
 
     zeros = sp.csr_matrix((basis_p.N, basis_p.N))  
-    L = bmat([[M,   None],
-            [None, zeros]], format='csr')
+    L = bmat([[M,   None, None],
+            [None, zeros, Mcol*0],
+            [None, Mrow*0, None]], format='csr')
 
+    # Condiciones de frontera
+    D_all = np.unique(np.concatenate([basis_u.get_dofs(pared).all()]))
 
-    if problem < 3:
-        dofs_left     = basis_u.get_dofs('left').all()
-        dofs_right    = basis_u.get_dofs('right').all()
-        dofs_top      = basis_u.get_dofs('top').all()
-        dofs_bottom   = basis_u.get_dofs('bottom').all()
+elif P_boundary_option == 2:
+    print('Condición: presión en un punto')
 
-        D_all = np.unique(np.concatenate([
-            dofs_left,
-            dofs_right,
-            dofs_top,
-            dofs_bottom,
-            Nu + np.array([0])
-        ]) )
-
-    else:
-        # dofs_left     = basis_u.get_dofs('left').all()
-        # dofs_right    = basis_u.get_dofs('right').all()
-        # dofs_top      = basis_u.get_dofs('top').all()
-        dofs_bottom   = basis_u.get_dofs('bottom').all()
-
-        D_all = np.unique(np.concatenate([
-            # dofs_left,
-            # dofs_right,
-            # dofs_top,
-            dofs_bottom,
-            Nu + np.array([0])
-        ]) )
+    # Construcción del ssitema
+    K = bmat([[nu*A,    B.T],
+              [B   ,    None]], format='csr') 
     
-    A_sys, xI, I   = condense(K, D=D_all)
-    M_sys, xIM, IM = condense(L, D=D_all)
-    vals, vecs     = eigs(A_sys, k=10, M=M_sys, sigma=0.0, which='LM', OPpart='r', tol=1e-12)
-
-    return vals, vecs
-
-#%%  
-if __name__ == "__main__":
-    N = [4, 8, 16, 32, 64, 128]
-    problem = [1, 2, 3]
-
-    vals_1 = []
-    vals_2 = []
-    vals_3 = []
-
-    for n in N:
-        for p in problem:
-            vals, vecs = build_problem_stokes(p, n)
-            if p == 1:
-                vals_1.append(np.real(vals).tolist())
-            elif p == 2:
-                vals_2.append(np.real(vals).tolist())
-            else:
-                vals_3.append(np.real(vals).tolist())
-            print(f'Problema {p}, N={n}, listo!')
-    # Exportar resultados a tablas
-    # Problema 1
-    df_1 = pd.DataFrame(vals_1, columns=[f'lambda_{i+1}' for i in range(len(vals_1[0]))])
-    df_1.insert(0, 'N', N)
-    df_1.to_csv('data/eigenvalues_problem1.csv', index=False)
-    # Problema 2
-    df_2 = pd.DataFrame(vals_2, columns=[f'lambda_{i+1}' for i in range(len(vals_2[0]))])
-    df_2.insert(0, 'N', N)
-    df_2.to_csv('data/eigenvalues_problem2.csv', index=False)
-    # Problema 3
-    df_3 = pd.DataFrame(vals_3, columns=[f'lambda_{i+1}' for i in range(len(vals_3[0]))])
-    df_3.insert(0, 'N', N)
-    df_3.to_csv('data/eigenvalues_problem3.csv', index=False)
+    zeros = sp.csr_matrix((basis_p.N, basis_p.N))  
+    L = bmat([[M,    None],
+              [None, zeros]], format='csr')
     
-# %%
+    # Condiciones de frontera
+    D_all = np.unique(np.concatenate([basis_u.get_dofs(pared).all(), np.array([basis_p.get_dofs(entrada).all()[0]])]))
+
+# Remover DOFs
+A_sys, xI, I   = condense(K, D=D_all)
+M_sys, xIM, IM = condense(L, D=D_all)
+
+# Resolver problema de valores propios generalizado
+vals, vecs = eigs(A_sys, k=40, M=M_sys, sigma=0.0, which='LM', OPpart='r')
+
+# Filtrar valores propios reales (parte imaginaria exactamente cero)
+mask_real = np.isclose(vals.imag, 0)
+vals = vals[mask_real].real
+vecs = vecs[:, mask_real].real
+
+# Ordenar autovalores
+idx          = np.argsort(vals)
+eigenvalues  = vals[idx]
+eigenvectors = vecs[:, idx]
+
+# Exportar todas las funciones propias y valores propios a CSV
+
+# Crear arrays para todas las soluciones
+n_modes        = len(eigenvalues)
+all_u_velocity = np.zeros((Nu, n_modes))
+all_p_pressure = np.zeros((Np, n_modes))
+
+for sol_idx in range(n_modes):
+    # Insertar la solución reducida en el vector global (con ceros en frontera)
+    u_sol = np.zeros(K.shape[0])
+    u_sol[I] = eigenvectors[:, sol_idx]
+    
+    # Separar componentes de velocidad y presión
+    all_u_velocity[:, sol_idx] = u_sol[:Nu]
+    all_p_pressure[:, sol_idx] = u_sol[Nu:Nu+Np]
+
+# Exportar a CSV
+pd.DataFrame(all_u_velocity).to_csv('Data/velocity_eigenfunctions_stokes.csv', index=False)
+pd.DataFrame(all_p_pressure).to_csv('Data/pressure_eigenfunctions_stokes.csv', index=False)
+pd.DataFrame({'eigenvalue': eigenvalues}).to_csv('Data/eigenvalues_stokes.csv', index=False)
+
+print('Done!')

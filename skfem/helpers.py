@@ -272,7 +272,7 @@ def laplacian(u: np.ndarray, basis):
 
     return lap_uh
 
-def precompute_operators(basis: Basis):
+def precompute_operators(basis: Basis, calculate_grad: bool = True, calculate_laplacian: bool = True):
     ref_coords   = basis.quadrature[0] 
     n_dofs_local = basis.elem.doflocs.shape[0]
     edofs        = basis.dofs.element_dofs
@@ -291,7 +291,14 @@ def precompute_operators(basis: Basis):
     hessian = np.array(list_hessian) # (n_dofs, ref_dim, ref_dim)
     invA    = basis.mesh.mapping().invA
 
-    grad_phi  = np.einsum('kie, dkq -> diqe', invA, dphi) # (n_dofs, phys_dim, n_quad, n_elems)
-    laplacian_phi = np.einsum('kie, lie, dkl -> de', invA, invA, hessian) # (n_dofs, n_elems)
+    if not calculate_grad:
+        grad_phi = None
+    else:
+        grad_phi  = np.einsum('kie, dkq -> diqe', invA, dphi) # (n_dofs, phys_dim, n_quad, n_elems)
+
+    if not calculate_laplacian:
+        laplacian_phi = None
+    else:
+        laplacian_phi = np.einsum('kie, lie, dkl -> de', invA, invA, hessian) # (n_dofs, n_elems)
 
     return edofs, phi, grad_phi, laplacian_phi

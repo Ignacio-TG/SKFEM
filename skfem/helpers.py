@@ -302,3 +302,39 @@ def precompute_operators(basis: Basis, calculate_grad: bool = True, calculate_la
         laplacian_phi = np.einsum('kie, lie, dkl -> de', invA, invA, hessian) # (n_dofs, n_elems)
 
     return edofs, phi, grad_phi, laplacian_phi
+
+def precompute_operators_at_centroids(basis: Basis, calculate_grad: bool = True, calculate_laplacian: bool = True, dim: int = 2):
+    
+    if dim == 2:
+        ref_coords   = np.array([1/3, 1/3])
+    elif dim == 3:
+        ref_coords   = np.array([1/4, 1/4, 1/4])
+
+    n_dofs_local = basis.elem.doflocs.shape[0]
+    edofs        = basis.dofs.element_dofs
+    list_phi      = []
+    list_dphi     = []
+    list_hessian  = []
+
+    for i in range(n_dofs_local):
+        out = basis.elem.lbasis(ref_coords, i)
+        list_phi.append(out[0])
+        list_dphi.append(out[1])
+        list_hessian.append(out[2])
+
+    phi     = np.array(list_phi)     # (n_dofs)
+    dphi    = np.array(list_dphi)    # (n_dofs, ref_dim)
+    hessian = np.array(list_hessian) # (n_dofs, ref_dim, ref_dim)
+    invA    = basis.mesh.mapping().invA
+
+    if not calculate_grad:
+        grad_phi = None
+    else:
+        grad_phi  = np.einsum('kie, dk -> die', invA, dphi) # (n_dofs, phys_dim, n_quad, n_elems)
+
+    if not calculate_laplacian:
+        laplacian_phi = None
+    else:
+        laplacian_phi = np.einsum('kie, lie, dkl -> de', invA, invA, hessian) # (n_dofs, n_elems)
+
+    return edofs, phi, grad_phi, laplacian_phi

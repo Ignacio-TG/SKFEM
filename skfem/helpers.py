@@ -6,6 +6,8 @@ from numpy import ndarray, zeros_like
 from skfem import Basis
 from skfem.element import DiscreteField
 from skfem.assembly.form.form import FormExtraParams
+from skfem import MeshTri, MeshTet
+import h5py
 
 
 FieldOrArray = Union[DiscreteField, ndarray]
@@ -338,3 +340,30 @@ def precompute_operators_at_centroids(basis: Basis, calculate_grad: bool = True,
         laplacian_phi = np.einsum('kie, lie, dkl -> de', invA, invA, hessian) # (n_dofs, n_elems)
 
     return edofs, phi, grad_phi, laplacian_phi
+
+
+def read_meshh5(filename, dim: int = 2):
+    f = h5py.File(filename, 'r')
+    coordinates_mesh = f['mesh/coordinates'][:]
+    elements_mesh    = f['mesh/topology'][:]
+
+    elements_boundaries    = f['/boundaries/topology'][:]
+    values_boundaries      = f['/boundaries/values'][:]
+
+    n_boundaries = np.unique(values_boundaries).size
+
+    boundaries_dofs = []
+    boundaries_elem = []
+    for i in range(1, n_boundaries + 1):
+        boundary_i = np.where(f['/boundaries/values'][:] == i)[0]
+        boundary_elements_i = elements_boundaries[boundary_i]
+        boundaries_elem.append(boundary_elements_i)
+        boundaries_dofs.append(boundary_i)
+    
+    if dim == 2:
+        mesh = MeshTri(coordinates_mesh.T, elements_mesh.T)
+        return mesh, boundaries_dofs, boundaries_elem
+    elif dim == 3:
+        mesh = MeshTet(coordinates_mesh.T, elements_mesh.T)
+        return mesh, boundaries_dofs, boundaries_elem
+    return None

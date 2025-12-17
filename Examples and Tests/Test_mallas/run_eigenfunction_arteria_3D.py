@@ -13,7 +13,7 @@ from scipy.sparse.linalg import eigs
 import pandas as pd
 
 
-mesh, boundaries_dofs, boundaries_elem = read_meshh5('Carotid3D_h1.h5', dim=3)
+mesh, boundaries_dofs, boundaries_elem = read_meshh5('mallas/Carotid3D_h1.h5', dim=3)
 boundary_wall    = boundaries_dofs[0]
 
 # Definir elementos y bases (P2 para velocidad, P1 para presión) en 3D

@@ -6,52 +6,16 @@ from skfem import (
 )
 from skfem.models.general import divergence
 from skfem.models.poisson import vector_laplace
-from skfem.helpers import dot
+from skfem.helpers import dot, read_meshh5
 import pandas as pd
 import scipy.sparse as sp
 from scipy.sparse.linalg import eigs
 import h5py
 
 # Importar malla
-f = h5py.File('Carotid_h1.h5', 'r')
-coordinates_mesh = f['mesh/coordinates'][:]
-elements_mesh    = f['mesh/topology'][:]
+mesh, dofs_boundary, elem_boundary = read_meshh5('mallas/Carotid_h1.h5', dim=2)
 
-coordinates_boundaries = f['/boundaries/coordinates'][:]
-elements_boundaries    = f['/boundaries/topology'][:]
-values_boundaries      = f['/boundaries/values'][:]
-
-boundary_1 = np.where(f['/boundaries/values'][:] == 1)[0]
-boundary_elements_1 = elements_boundaries[boundary_1]
-
-boundary_2 = np.where(f['/boundaries/values'][:] == 2)[0]
-boundary_elements_2 = elements_boundaries[boundary_2]
-
-boundary_3 = np.where(f['/boundaries/values'][:] == 3)[0]
-boundary_elements_3 = elements_boundaries[boundary_3]
-
-boundary_4 = np.where(f['/boundaries/values'][:] == 4)[0]
-boundary_elements_4 = elements_boundaries[boundary_4]
-
-boundary_5 = np.where(f['/boundaries/values'][:] == 5)[0]
-boundary_elements_5 = elements_boundaries[boundary_5]
-
-boundary_6 = np.where(f['/boundaries/values'][:] == 6)[0]
-boundary_elements_6 = elements_boundaries[boundary_6]
-
-boundary_7 = np.where(f['/boundaries/values'][:] == 7)[0]
-boundary_elements_7 = elements_boundaries[boundary_7]
-
-boundaries = [boundary_elements_1, boundary_elements_2,
-             boundary_elements_3, boundary_elements_4,
-              boundary_elements_5, boundary_elements_6,
-              boundary_elements_7]
-
-boundary_wall = boundary_1
-boundary_inflow = boundary_2
-boundary_outflow = np.concatenate([boundary_3, boundary_4, boundary_5, boundary_6, boundary_7])
-
-mesh = MeshTri(coordinates_mesh.T, elements_mesh.T)
+boundary_wall = dofs_boundary[0]
 
 # Definir elementos y bases (P2 para velocidad, P1 para presión)
 element = {
@@ -124,8 +88,11 @@ for sol_idx in range(n_modes):
     all_p_pressure[:, sol_idx] = u_sol[Nu:Nu+Np]
 
 # Exportar a CSV
-pd.DataFrame(all_u_velocity).to_csv('eigenfunctions/velocity_eigenfunctions_arterias.csv', index=False)
-pd.DataFrame(all_p_pressure).to_csv('eigenfunctions/pressure_eigenfunctions_arterias.csv', index=False)
-pd.DataFrame({'eigenvalue': eigenvalues}).to_csv('eigenfunctions/eigenvalues_arterias.csv', index=False)
+np.savez_compressed(
+    'eigenmodes_arterias_2D.npz',
+    velocity=all_u_velocity,
+    pressure=all_p_pressure,
+    eigenvalues=eigenvalues
+)
 
 print('Done!')

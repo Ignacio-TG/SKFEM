@@ -4,4 +4,5 @@ docs/_build/
 __pycache__/
 *.egg-info/
 *.vtu
+*.csv
 *~

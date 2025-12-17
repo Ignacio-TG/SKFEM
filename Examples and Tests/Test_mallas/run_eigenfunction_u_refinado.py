@@ -6,31 +6,16 @@ from skfem import (
 )
 from skfem.models.general import divergence
 from skfem.models.poisson import vector_laplace
-from skfem.helpers import dot
+from skfem.helpers import dot, read_meshh5
 import pandas as pd
 import scipy.sparse as sp
 from scipy.sparse.linalg import eigs
 import h5py
 
 # Importar malla
-f = h5py.File('umesh_h3.h5', 'r')
-coordinates_mesh = f['mesh/coordinates'][:]
-elements_mesh    = f['mesh/topology'][:]
+mesh, dofs_boundary, elem_boundary = read_meshh5('mallas/umesh_h3.h5', dim=2)
 
-coordinates_boundaries = f['/boundaries/coordinates'][:]
-elements_boundaries    = f['/boundaries/topology'][:]
-values_boundaries      = f['/boundaries/values'][:]
-
-boundary_wall = np.where(f['/boundaries/values'][:] == 1)[0]
-boundary_elements_wall = elements_boundaries[boundary_wall]
-
-boundary_inflow = np.where(f['/boundaries/values'][:] == 2)[0]
-boundary_elements_inflow = elements_boundaries[boundary_inflow]
-
-boundary_outflow = np.where(f['/boundaries/values'][:] == 3)[0]
-boundary_elements_outflow = elements_boundaries[boundary_outflow]
-
-mesh = MeshTri(coordinates_mesh.T, elements_mesh.T)
+boundary_wall = dofs_boundary[0]
 
 # Definir elementos y bases (P2 para velocidad, P1 para presión)
 element = {
@@ -102,9 +87,13 @@ for sol_idx in range(n_modes):
     all_u_velocity[:, sol_idx] = u_sol[:Nu]
     all_p_pressure[:, sol_idx] = u_sol[Nu:Nu+Np]
 
-# Exportar a CSV
-pd.DataFrame(all_u_velocity).to_csv('eigenfunctions/velocity_eigenfunctions_u_refinado.csv', index=False)
-pd.DataFrame(all_p_pressure).to_csv('eigenfunctions/pressure_eigenfunctions_u_refinado.csv', index=False)
-pd.DataFrame({'eigenvalue': eigenvalues}).to_csv('eigenfunctions/eigenvalues_u_refinado.csv', index=False)
+# Exportar a archivo .npz comprimido
+np.savez_compressed(
+    'eigenmodes_u_refinado_2D_float32.npz',
+    velocity_eigenfunctions=all_u_velocity.astype(np.float32),
+    pressure_eigenfunctions=all_p_pressure.astype(np.float32),
+    eigenvalues=eigenvalues.astype(np.float32)
+)
+
 
 print('Done!')

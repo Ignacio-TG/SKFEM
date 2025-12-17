@@ -88,9 +88,12 @@ for sol_idx in range(n_modes):
     all_u_velocity[:, sol_idx] = u_sol[:Nu]
     all_p_pressure[:, sol_idx] = u_sol[Nu:Nu+Np]
 
-# Exportar a CSV
-pd.DataFrame(all_u_velocity).to_csv('eigenfunctions/velocity_eigenfunctions_arterias_3D.csv', index=False)
-pd.DataFrame(all_p_pressure).to_csv('eigenfunctions/pressure_eigenfunctions_arterias_3D.csv', index=False)
-pd.DataFrame({'eigenvalue': eigenvalues}).to_csv('eigenfunctions/eigenvalues_arterias_3D.csv', index=False)
+# Exportar a npz
+np.savez_compressed(
+    'eigenmodes_arterias_3D.npz',
+    velocity_eigenfunctions=all_u_velocity.astype(np.float32),
+    pressure_eigenfunctions=all_p_pressure.astype(np.float32),
+    eigenvalues=eigenvalues.astype(np.float32)
+)
 
 print('Done!')

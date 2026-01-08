@@ -5,4 +5,10 @@ __pycache__/
 *.egg-info/
 *.vtu
 *.csv
+*.h5
+*.vtk
+*.npz
+*.pkl
+*.obj
 *~
+

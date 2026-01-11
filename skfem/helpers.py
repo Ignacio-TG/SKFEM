@@ -3,7 +3,7 @@
 from typing import Union, Optional
 import numpy as np
 from numpy import ndarray, zeros_like
-from skfem import Basis
+from skfem import Basis, FacetBasis
 from skfem.element import DiscreteField
 from skfem.assembly.form.form import FormExtraParams
 from skfem import MeshTri, MeshTet
@@ -340,6 +340,55 @@ def precompute_operators_at_centroids(basis: Basis, calculate_grad: bool = True,
         laplacian_phi = np.einsum('kie, lie, dkl -> de', invA, invA, hessian) # (n_dofs, n_elems)
 
     return edofs, phi, grad_phi, laplacian_phi
+
+
+def precompute_boundary_outflow_2D(malla, basis, indices_salida, calculate_grad=False):
+    
+    # Listas para almacenar los elementos y los bordes locales asociados a cada faceta de salida
+    facets     = malla.facets[:, indices_salida]
+    elements   = malla.f2t[0, indices_salida]
+    elem_nodes = malla.t[:, elements]
+
+    local_edges_list = []
+
+    for i in range(facets.shape[1]):
+        nodes = elem_nodes[:, i]
+        for j in range(len(nodes)):
+            edge = {nodes[j], nodes[(j+1)%len(nodes)]}
+            if edge == set(facets[:, i]):
+                local_edges_list.append(j)
+                break
+
+    elem_ids    = np.asarray(elements)
+    local_edges = np.array(local_edges_list)
+
+    # Mapear el punto medio segun arista: 0: (0.5, 0.0), 1: (0.5, 0.5), 2: (0.0, 0.5)
+    mapa = np.array([[0.5, 0.0], [0.5, 0.5], [0.0, 0.5]])
+    ref_coords = mapa[local_edges].T  # shape: (2, n_facets)
+
+    n_dofs_local = basis.elem.doflocs.shape[0]
+    edofs = basis.element_dofs[:, elem_ids]
+
+    list_phi = []
+    list_dphi = []
+    for i in range(n_dofs_local):
+        out = basis.elem.lbasis(ref_coords, i)
+        list_phi.append(out[0])
+        list_dphi.append(out[1])
+
+    phi_final  = np.array(list_phi)
+    dphi       = np.array(list_dphi)
+
+    if not calculate_grad:
+        grad_phi = None
+    else:
+        invA     = basis.mesh.mapping().invA[:, :, elem_ids]
+        grad_phi = np.einsum('rpe, dre -> dpe', invA, dphi)
+
+    normals = FacetBasis(malla, basis.elem, facets=indices_salida).normals
+
+    return edofs, phi_final, grad_phi, normals
+
 
 
 def read_meshh5(filename, dim: int = 2):

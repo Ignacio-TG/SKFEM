@@ -15,6 +15,6 @@ class ElementTriP0(ElementH1):
 
     def lbasis(self, X, i):
         if i == 0:
-            return 1. + 0. * X[0], 0. * X
+            return 1. + 0. * X[0], 0. * X, None
         else:
             self._index_error()

@@ -126,4 +126,4 @@ class ElementTriP3(ElementH1):
         else:
             self._index_error()
 
-        return phi, dphi
+        return phi, dphi, None
